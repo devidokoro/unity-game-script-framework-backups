@@ -1,0 +1,137 @@
+using UnityEngine;
+using System.Collections;
+using TMPro;
+using System;
+
+public class CarDialogueController : MonoBehaviour
+{
+    [Header("UI Elements")]
+    public GameObject BGPanelImage;
+    public TextMeshProUGUI subtextElement;
+    public GameObject roadBarrierObject;
+
+    [Header("Typing Settings")]
+    [SerializeField] private float textTypeSpeed = .04f;
+    [SerializeField] private float slowTypeSpeed = .8f;
+
+    [Header("Audio Settings")]
+    public AudioSource typingSrc;
+    public AudioClip typingClip;
+    [Range(0f, 1f)] public float typingVolume = .1f;
+
+    [Header("Scene Sequence Links")]
+    [SerializeField] private EvilCarStraightLine evilCarScript;
+    [SerializeField] private GameObject honkTriggerCollider;
+    [SerializeField] private FindCrosshair playerCrosshairRef;
+
+    public bool IsDialogueActive 
+    { 
+        get; 
+        private set;
+    }
+    public bool hasSequencePlayed = false;
+
+    public AudioSource src;
+    public AudioClip audioClip;
+
+    public void StartDialogue()
+    {
+        if (IsDialogueActive || hasSequencePlayed) return;
+        hasSequencePlayed = true;
+
+        if (honkTriggerCollider != null) honkTriggerCollider.SetActive(false);
+
+        StartCoroutine(RunDialogueSequence());
+    }
+    private IEnumerator RunDialogueSequence()
+    {
+        src.PlayOneShot(audioClip);
+        string[] dialogueLines = new string[]
+        {
+            "_???_: sample text",
+            "+YOU+: sample text."
+        };
+        yield return StartCoroutine(ExecuteTextPrinter(dialogueLines, true, OnSequenceComplete));
+    }
+    private IEnumerator ExecuteTextPrinter(string[] lines, bool requireInput, Action completionCallback)
+    {
+        IsDialogueActive = true;
+        BGPanelImage.gameObject.SetActive(true);
+        subtextElement.gameObject.SetActive(true);
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            subtextElement.text = "";
+
+            float currLineSpeed = textTypeSpeed;
+            if (i == 6) currLineSpeed = slowTypeSpeed;
+
+            bool isRedMode = false;
+            bool isGoldMode = false;
+
+            string visibleText = ""; //builds up what text is curr displayed
+
+            foreach (char character in lines[i])
+            {
+                if (character == '_')
+                {
+                    isRedMode = !isRedMode;
+                    continue;
+                }
+                if (character == '+')
+                {
+                    isGoldMode = !isGoldMode;
+                    continue;
+                }
+                if (isRedMode)
+                    visibleText += "<color=red>" + character + "</color>";
+                else if (isGoldMode)
+                    visibleText += "<color=#ECE365>" + character + "</color>";
+                else
+                    visibleText += character;
+
+                subtextElement.text = visibleText;
+
+                if (character != ' ' && typingSrc != null && typingClip != null)
+                {
+                    typingSrc.PlayOneShot(typingClip, typingVolume);
+                }
+                yield return new WaitForSeconds(currLineSpeed);
+            }
+            bool isLastLineOfDialogue = (i == lines.Length - 1);
+            if (requireInput)
+            {
+                if (!isLastLineOfDialogue)
+                    yield return WaitForPlayerInput();
+                else
+                    yield return new WaitForSeconds(2f); //let last sentence linger b4 disapear
+            }
+            else
+            {
+                yield return new WaitForSeconds(2f);
+            }
+        }
+        //wipe ui clean
+        subtextElement.text = "";
+        subtextElement.gameObject.SetActive(false);
+        BGPanelImage.gameObject.SetActive(false);
+        
+        IsDialogueActive = false;
+
+        if (completionCallback != null) completionCallback();
+    }
+    private void OnSequenceComplete()
+    {
+        playerCrosshairRef.ExitDialogueMode();
+        roadBarrierObject.SetActive(false);
+        if (honkTriggerCollider != null) honkTriggerCollider.SetActive(false);
+        evilCarScript.OrderDriveAway();
+    }
+    private IEnumerator WaitForPlayerInput()
+    {
+        while (!(Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter) || Input.GetMouseButtonDown(0)))
+        {
+            yield return null;
+        }
+    }
+}
