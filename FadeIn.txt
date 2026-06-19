@@ -39,7 +39,7 @@ public class SimpleFadeIn : MonoBehaviour
         fadeImage.color = c;
         if (fadeCanvas != null)
         {
-            fadeCanvas.gameObject.SetActive(false);
+            fadeCanvas.gameObject.SetActive(true);
         }
     }
     public IEnumerator FadeOut()
