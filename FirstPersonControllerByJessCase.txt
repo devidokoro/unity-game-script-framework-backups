@@ -359,7 +359,7 @@ public class FirstPersonController : MonoBehaviour
             {
                 if (isSprinting && playerCamera != null)
                 {
-                    sprintRemaining -= timer.deltaTime;
+                    sprintRemaining -= Time.deltaTime;
                     if (sprintRemaining <= 0)
                     {
                         sprintRemaining = 0;
