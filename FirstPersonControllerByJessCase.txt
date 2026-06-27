@@ -344,7 +344,7 @@ public class FirstPersonController : MonoBehaviour
         {
             bool moving = Mathf.Abs(Input.GetAxis("Horizontal")) > 0.1f || Mathf.Abs(Input.GetAxis("Vertical")) > 0.1f; 
             
-            if (playerCanMove && moving && Input.GetKey(sprintKey) && sprintRemaining > 0f && !isSprintCooldown)
+            if (playerCanMove && moving && Input.GetKey(sprintKey) && (unlimitedSprint || (sprintRemaining > 0f && !isSprintCooldown)))
             {
                 isSprinting = true;
                 isZoomed = false; 
@@ -355,12 +355,11 @@ public class FirstPersonController : MonoBehaviour
             {
                 isSprinting = false;
             }
-
-            if (isSprinting && playerCamera != null)
+            if (!unlimitedSprint)
             {
-                if (!unlimitedSprint)
+                if (isSprinting && playerCamera != null)
                 {
-                    sprintRemaining -= Time.deltaTime; 
+                    sprintRemaining -= timer.deltaTime;
                     if (sprintRemaining <= 0)
                     {
                         sprintRemaining = 0;
@@ -368,33 +367,28 @@ public class FirstPersonController : MonoBehaviour
                         isSprintCooldown = true;
                     }
                 }
-            } 
-            else
-            {
-                if (!unlimitedSprint)
+                else
                 {
                     sprintRemaining = Mathf.Clamp(sprintRemaining + Time.deltaTime, 0, sprintDuration);
                 }
-            }
-
-            if (isSprintCooldown)
-            {
-                sprintCooldown -= Time.deltaTime;
-                if (sprintCooldown <= 0)
+                if (isSprintCooldown)
                 {
-                    isSprintCooldown = false;
-                    sprintCooldown = sprintCooldownReset;
+                    sprintCooldown -= Time.deltaTime;
+                    if (sprintCooldown <= 0)
+                    {
+                        isSprintCooldown = false;
+                        sprintCooldown = sprintCooldownReset;
+                    }
                 }
             }
-
-            if (useSprintBar && !unlimitedSprint && sprintBar != null)
+            if (useSprintBar && sprintBar != null)
             {
-                float sprintRemainingPercent = sprintRemaining / sprintDuration;
+                float sprintRemainingPercent = unlimitedSprint ? 1f : (sprintRemaining / sprintDuration);
                 sprintBar.transform.localScale = new Vector3(sprintRemainingPercent, 1f, 1f); 
 
                 if (hideBarWhenFull && sprintBarCG != null)
                 {
-                    if (sprintRemaining >= sprintDuration)
+                    if (unlimitedSprint || sprintRemaining >= sprintDuration)
                     {
                         sprintBarCG.alpha = Mathf.Max(0, sprintBarCG.alpha - 3 * Time.deltaTime);
                     } 
